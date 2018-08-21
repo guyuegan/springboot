@@ -1,4 +1,4 @@
-package neo;
+package org.neo;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
