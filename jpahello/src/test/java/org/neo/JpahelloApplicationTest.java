@@ -4,9 +4,7 @@ import com.alibaba.fastjson.JSON;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.neo.dao.StudentCrudRepository;
-import org.neo.dao.StudentPageAndSortRepository;
-import org.neo.dao.StudentRepository;
+import org.neo.dao.*;
 import org.neo.model.Student;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -14,10 +12,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.querydsl.QPageRequest;
 import org.springframework.data.querydsl.QSort;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
 import java.util.List;
 
 @RunWith(SpringRunner.class)
@@ -32,6 +35,12 @@ public class JpahelloApplicationTest {
 
     @Autowired
     private StudentPageAndSortRepository studentPageAndSortRepository;
+
+    @Autowired
+    private StudentSpecificationRepository studentSpecificationRepository;
+
+    @Autowired
+    private StudentSpecRepositoryImpl studentSpecRepository;
 
     @Test
     public void testStudentRepository(){
@@ -146,7 +155,14 @@ Hibernate: select count(student0_.id) as col_0_0_ from t_stu student0_ where stu
 
     @Test
     public void testSpecification(){
+        List<Student> all = studentSpecRepository.findByNameOrAddress();
+        System.out.println(JSON.toJSONString(all));
+    }
 
+    @Test
+    public void testSpecification02(){
+        List<Student> all = studentSpecRepository.findByAgeAndAddress();
+        System.out.println(JSON.toJSONString(all));
     }
 
 }
