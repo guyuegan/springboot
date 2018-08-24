@@ -1,6 +1,7 @@
 package org.neo;
 
 import com.alibaba.fastjson.JSON;
+import com.mongodb.client.result.DeleteResult;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.neo.dao.UserDao;
@@ -22,6 +23,21 @@ public class MongodbhelloApplicationTest {
 
     @Autowired
     private UserDao userDao;
+
+    @Test
+    public void testSaveByRepository(){
+        //不指定id会自动生成
+        User save = userRepository.save(new User(null, "matrix", 10000, "robot"));
+        System.out.println(JSON.toJSONString(save));
+    }
+
+    @Test
+    public void testFindByNameRepository(){
+        User bajie = userRepository.findByUsername("bajie");
+        System.out.println(JSON.toJSONString(bajie));
+    }
+
+
 
     @Test
     public void testSave(){
@@ -57,4 +73,23 @@ public class MongodbhelloApplicationTest {
         User wukong = userDao.findByUsername("wukong");
         System.out.println(JSON.toJSONString(wukong));
     }
+
+    @Test
+    public void testUpate(){
+        User test = userDao.findByUsername("test");
+        if (test != null){
+            test.setUsername("xiaobai");
+        }
+        userDao.save(test);
+    }
+
+    @Test
+    public void testDel(){
+        User neo = userDao.findByUsername("matrix");
+        if (neo != null){
+            DeleteResult del = userDao.del(neo.getId());
+            System.out.println(JSON.toJSONString(del));
+        }
+    }
+
 }
