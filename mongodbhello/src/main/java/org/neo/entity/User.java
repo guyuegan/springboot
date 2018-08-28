@@ -6,6 +6,7 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import javax.validation.constraints.NotNull;
+import java.util.Date;
 
 @Document(collection = "user")
 public class User {
@@ -19,6 +20,8 @@ public class User {
     private Integer age;
 
     private String nickname;
+
+    private Date birth;
 
     public User(){}
 
@@ -60,5 +63,13 @@ public class User {
 
     public void setNickname(String nickname) {
         this.nickname = nickname;
+    }
+
+    public Date getBirth() {
+        return birth;
+    }
+
+    public void setBirth(Date birth) {
+        this.birth = birth;
     }
 }

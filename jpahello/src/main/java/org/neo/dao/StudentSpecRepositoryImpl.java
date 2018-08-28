@@ -1,12 +1,10 @@
 package org.neo.dao;
 
 
-import com.alibaba.fastjson.JSON;
 import org.neo.model.Student;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.data.querydsl.QSort;
 import org.springframework.stereotype.Component;
 
 import javax.persistence.criteria.CriteriaBuilder;
@@ -55,9 +53,9 @@ public class StudentSpecRepositoryImpl {
         };
 
         Specification<Student> allSpec = specification.and(specification02);
-        Sort.Order ageOrder = new QSort.Order(Sort.Direction.DESC, "age");
+        Sort ageOrd = Sort.by(Sort.Direction.DESC, "age");
 
-        List<Student> all = studentSpecificationRepository.findAll(allSpec, new Sort(ageOrder));
+        List<Student> all = studentSpecificationRepository.findAll(allSpec, ageOrd);
 
         return all;
     }

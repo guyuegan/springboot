@@ -2,6 +2,7 @@ package org.neo;
 
 import com.alibaba.fastjson.JSON;
 import com.mongodb.client.result.DeleteResult;
+import com.mongodb.client.result.UpdateResult;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.neo.dao.UserDao;
@@ -11,7 +12,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @RunWith(SpringRunner.class)
@@ -104,8 +108,46 @@ public class MongodbhelloApplicationTest {
     }
 
     @Test
-    public void testOrder(){
+    public void testSort(){
+        List<User> users = userDao.findByAgeMutilWith(1, 1000);
+        System.out.println(JSON.toJSONString(users));
+    }
 
+    @Test
+    public void testSort02(){
+        List<User> users = userDao.findByAgeOrderList(1, 1000);
+        System.out.println(JSON.toJSONString(users));
+    }
+
+    @Test
+    public void testConverter(){
+        userDao.save(new User(null, "niumowang", 777, "niuniu"));
+    }
+
+    @Test
+    public void testSetField(){
+        try {
+            Date birth = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("1988-08-08 08:08:08");
+            UpdateResult updateResult = userDao.setField("username", "^ba", "birth", birth);
+            System.out.println(JSON.toJSONString(updateResult));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    public void testFindBetweenTime(){
+        try {
+            /**
+             * mongoTemplate生成的shell: { "birth" : { "$gte" : { "$date" : 834012366000 }, "$lte" : { "$date" : 902534888000 } } }
+             */
+            Date startTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("1996-06-06 06:06:06");
+            Date endTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("1998-08-08 08:08:08");
+            List<User> betweenTime = userDao.findBetweenTime(startTime, endTime);
+            System.out.println(JSON.toJSONString(betweenTime));
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
     }
 
 }

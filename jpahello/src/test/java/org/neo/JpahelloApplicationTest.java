@@ -9,18 +9,12 @@ import org.neo.model.Student;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.querydsl.QPageRequest;
-import org.springframework.data.querydsl.QSort;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Predicate;
-import javax.persistence.criteria.Root;
+import java.util.Arrays;
 import java.util.List;
 
 @RunWith(SpringRunner.class)
@@ -136,20 +130,27 @@ Hibernate: select count(student0_.id) as col_0_0_ from t_stu student0_ where stu
     @Test
     public void testSort(){
         //以age降序
-        Sort order1 = new Sort(new Sort.Order(Sort.Direction.DESC, "age"));
-        List<Student> students = studentPageAndSortRepository.findByAgeBetween(1, 200, order1);
+        Sort sort1 = Sort.by(new Sort.Order(Sort.Direction.DESC, "age"));
+        List<Student> students = studentPageAndSortRepository.findByAgeBetween(1, 200, sort1);
         System.out.println(JSON.toJSONString(students) + "\n");
 
         //以age, name降序
-        Sort order2 = new Sort(new Sort.Order(Sort.Direction.DESC, "age"),
-                new Sort.Order(Sort.Direction.DESC, "name"));
-        List<Student> students02 = studentPageAndSortRepository.findByAgeBetween(1, 200, order2);
+       Sort sort2 = Sort.by(
+                Arrays.asList(new Sort.Order[]{
+                new Sort.Order(Sort.Direction.DESC, "age"),
+                new Sort.Order(Sort.Direction.DESC, "name")})
+       );
+        List<Student> students02 = studentPageAndSortRepository.findByAgeBetween(1, 200, sort2);
         System.out.println(JSON.toJSONString(students02) + "\n");
 
         //以age降序，name升序
-        Sort order3 = new Sort(new Sort.Order(Sort.Direction.DESC, "age"),
-                new Sort.Order(Sort.Direction.ASC, "name"));
-        List<Student> students3 = studentPageAndSortRepository.findByAgeBetween(1, 200, order3);
+        Sort sort3 = Sort.by(
+                Arrays.asList(new Sort.Order[]{
+                        new Sort.Order(Sort.Direction.DESC, "age"),
+                        new Sort.Order(Sort.Direction.ASC, "name")
+                })
+        );
+        List<Student> students3 = studentPageAndSortRepository.findByAgeBetween(1, 200, sort3);
         System.out.println(JSON.toJSONString(students3) + "\n");
     }
 
