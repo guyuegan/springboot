@@ -4,6 +4,8 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/hello/hello.iml" filepath="$PROJECT_DIR$/hello/hello.iml" />
       <module fileurl="file://$PROJECT_DIR$/jpahello/jpahello.iml" filepath="$PROJECT_DIR$/jpahello/jpahello.iml" />
+      <module fileurl="file://$PROJECT_DIR$/mongodbhello/mongodbhello.iml" filepath="$PROJECT_DIR$/mongodbhello/mongodbhello.iml" />
+      <module fileurl="file://$PROJECT_DIR$/redishello/redishello.iml" filepath="$PROJECT_DIR$/redishello/redishello.iml" />
     </modules>
   </component>
 </project>
