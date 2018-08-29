@@ -183,7 +183,19 @@ public class MongodbhelloApplicationTest {
 
     @Test
     public void getRoleMaxCount(){
-        AggregationResults<Document> countByRole = userDao.getRoleMaxCount();
+        AggregationResults<Document> countByRole = userDao.getRoleCountMax();
+        countByRole.forEach((obj) -> System.out.println(JSON.toJSONString(obj)));
+    }
+
+    @Test
+    public void getCountBetweenAbility(){
+        AggregationResults<Document> countByRole = userDao.getCountBetweenAbility("attack", 60, 100);
+        countByRole.forEach((obj) -> System.out.println(JSON.toJSONString(obj)));
+    }
+
+    @Test
+    public void getCountNotBetweenAbilitiy(){
+        AggregationResults<Document> countByRole = userDao.getCountNotBetweenAbilitiy("attack", 30, 60);
         countByRole.forEach((obj) -> System.out.println(JSON.toJSONString(obj)));
     }
 }

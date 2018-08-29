@@ -135,11 +135,12 @@ public class UserDao {
         );
         AggregationResults<Document> user =
                 mongoTemplate.aggregate(Aggregation.newAggregation(countAndSort), "user", Document.class);
+
         return user;
     }
 
     //取人数最多的role组
-    public AggregationResults<Document> getRoleMaxCount(){
+    public AggregationResults<Document> getRoleCountMax(){
         List<AggregationOperation> countAndSort = Arrays.asList(
                 new AggregationOperation[]{
                         Aggregation.group("role").count().as("count"),
@@ -147,9 +148,44 @@ public class UserDao {
                         Aggregation.limit(1)
                 }
         );
-        AggregationResults<Document> user =
+        AggregationResults<Document> aggregateResult =
                 mongoTemplate.aggregate(Aggregation.newAggregation(countAndSort), "user", Document.class);
-        return user;
+
+        return aggregateResult;
+    }
+
+    public AggregationResults<Document> getCountBetweenAbility(String item, int low, int high){
+        List<AggregationOperation> aggregationOperations = Arrays.asList(
+                new AggregationOperation[]{
+                        Aggregation.match(Criteria.where("role").is("student")),
+                        Aggregation.unwind("abilities"),
+                        Aggregation.match(Criteria.where("abilities.item").is(item).and("abilities.value").gte(low).lte(high)),
+                        Aggregation.group("role").count().as("count")
+                }
+        );
+        AggregationResults<Document> aggregateResult =
+                mongoTemplate.aggregate(Aggregation.newAggregation(aggregationOperations), "user", Document.class);
+
+        return aggregateResult;
+    }
+
+    public AggregationResults<Document> getCountNotBetweenAbilitiy(String item, int low, int high){
+
+        Criteria orCriteria = new Criteria().orOperator(
+                Criteria.where("abilities.value").lt(low),
+                Criteria.where("abilities.value").gt(high)
+        );
+
+        List<AggregationOperation> aggregationOperations = Arrays.asList(
+                new AggregationOperation[]{
+                        Aggregation.match(Criteria.where("role").is("student")),
+                        Aggregation.unwind("abilities"),
+                        Aggregation.match(Criteria.where("abilities.item").is(item).andOperator(orCriteria)),
+                        Aggregation.group("role").count().as("count")
+                });
+        AggregationResults<Document> aggregateResult = mongoTemplate.aggregate(Aggregation.newAggregation(aggregationOperations), "user", Document.class);
+
+        return aggregateResult;
     }
 
     public static void main(String[] args) throws Exception{
