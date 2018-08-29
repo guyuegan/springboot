@@ -3,6 +3,7 @@ package org.neo;
 import com.alibaba.fastjson.JSON;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
+import org.bson.Document;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.neo.dao.UserDao;
@@ -10,11 +11,13 @@ import org.neo.dao.UserRepository;
 import org.neo.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.mongodb.core.aggregation.AggregationResults;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -66,7 +69,7 @@ public class MongodbhelloApplicationTest {
         List<User> all = userRepository.findAll(new Sort(order));*/
 
         List<User> all = userDao.findAll();
-        System.out.println(JSON.toJSONString(all));
+        all.forEach((u) -> System.out.println(JSON.toJSONString(u)));
     }
 
     @Test
@@ -98,25 +101,25 @@ public class MongodbhelloApplicationTest {
     @Test
     public void testPage() {
         List<User> page = userDao.findPage(1, 2);
-        System.out.println(JSON.toJSONString(page));
+        page.forEach((u) -> System.out.println(JSON.toJSONString(u)));
     }
 
     @Test
     public void testRegex() {
         List<User> sen = userDao.findByUsernameAndAge("sen", 555, 888);
-        System.out.println(JSON.toJSONString(sen));
+        sen.forEach((u) -> System.out.println(JSON.toJSONString(u)));
     }
 
     @Test
     public void testSort(){
         List<User> users = userDao.findByAgeMutilWith(1, 1000);
-        System.out.println(JSON.toJSONString(users));
+        users.forEach((u) -> System.out.println(JSON.toJSONString(u)));
     }
 
     @Test
     public void testSort02(){
         List<User> users = userDao.findByAgeOrderList(1, 1000);
-        System.out.println(JSON.toJSONString(users));
+        users.forEach((u) -> System.out.println(JSON.toJSONString(u)));
     }
 
     @Test
@@ -127,9 +130,22 @@ public class MongodbhelloApplicationTest {
     @Test
     public void testSetField(){
         try {
-            Date birth = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("1988-08-08 08:08:08");
-            UpdateResult updateResult = userDao.setField("username", "^ba", "birth", birth);
+
+            List<User.Ability> abilities = Arrays.asList(
+                    new User.Ability[]{
+                            new User().new Ability("attack", 88),
+                            new User().new Ability("happy", 88)
+                    }
+            );
+            UpdateResult updateResult = userDao.setField("username", "^niu", "abilities", abilities);
             System.out.println(JSON.toJSONString(updateResult));
+
+            /*UpdateResult updateResult = userDao.setField("username", "^hon", "role", "monster");
+            System.out.println(JSON.toJSONString(updateResult));*/
+
+            /* Date birth = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("1988-08-08 08:08:08");
+            UpdateResult updateResult = userDao.setField("username", "^ba", "birth", birth);
+            System.out.println(JSON.toJSONString(updateResult));*/
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -139,15 +155,35 @@ public class MongodbhelloApplicationTest {
     public void testFindBetweenTime(){
         try {
             /**
-             * mongoTemplate生成的shell: { "birth" : { "$gte" : { "$date" : 834012366000 }, "$lte" : { "$date" : 902534888000 } } }
+             * mongoTemplate生成的shell:
+             * { "birth" : { "$gte" : { "$date" : 834012366000 }, "$lte" : { "$date" : 902534888000 } } }
              */
-            Date startTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("1996-06-06 06:06:06");
-            Date endTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("1998-08-08 08:08:08");
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            Date startTime = sdf.parse("1993-03-03 11:03:03");
+            Date endTime = sdf.parse("1998-08-08 16:08:08");
             List<User> betweenTime = userDao.findBetweenTime(startTime, endTime);
-            System.out.println(JSON.toJSONString(betweenTime));
+            //jdk1.8新写法
+            betweenTime.forEach((u) -> System.out.println(JSON.toJSONString(u)));
         } catch (ParseException e) {
             e.printStackTrace();
         }
     }
 
+    @Test
+    public void testCountByRole(){
+        AggregationResults<Document> countByRole = userDao.getRoleCount();
+        countByRole.forEach((obj) -> System.out.println(JSON.toJSONString(obj)));
+    }
+
+    @Test
+    public void getRoleCountDesc(){
+        AggregationResults<Document> countByRole = userDao.getRoleCountDesc();
+        countByRole.forEach((obj) -> System.out.println(JSON.toJSONString(obj)));
+    }
+
+    @Test
+    public void getRoleMaxCount(){
+        AggregationResults<Document> countByRole = userDao.getRoleMaxCount();
+        countByRole.forEach((obj) -> System.out.println(JSON.toJSONString(obj)));
+    }
 }

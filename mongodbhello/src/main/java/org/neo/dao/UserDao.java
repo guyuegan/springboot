@@ -1,20 +1,22 @@
 package org.neo.dao;
 
+import com.alibaba.fastjson.JSON;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
+import org.bson.Document;
 import org.neo.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
+import org.springframework.data.mongodb.core.aggregation.AggregationResults;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Repository;
 
-import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 @Repository
 public class UserDao {
@@ -96,23 +98,67 @@ public class UserDao {
 
     public List<User> findBetweenTime(Date startTime, Date endTime){
         /**
-         * mongoTemplate生成的shell: { "birth" : { "$gte" : { "$date" : 834012366000 }, "$lte" : { "$date" : 902534888000 } } }
+         * mongoTemplate生成的shell:
+         * { "birth" : { "$gte" : { "$date" : 834012366000 }, "$lte" : { "$date" : 902534888000 } } }
          */
 
-        Criteria criteria = new Criteria();
+        /*Criteria criteria = new Criteria();
         criteria.andOperator(
-//                Criteria.where("birth").gte(startTime)
-                Criteria.where("birth").lte(endTime)
-        );
-        Query birthQry = new Query(criteria);
-        List<User> users = mongoTemplate.find(birthQry, User.class);
+                Criteria.where("birth").gt(startTime),
+                Criteria.where("birth").lt(endTime)
+        );*/
+        Query birthQry = new Query(Criteria.where("birth").gte(startTime).lte(endTime));
+        List<User> users = mongoTemplate.find(birthQry, User.class, "user");
         return users;
     }
 
-    public static void main(String[] args) throws Exception{
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        Date parse = sdf.parse("1955-05-05 05:05:05");
-        System.out.println(parse);
+    /**
+     * return user.getMappedResults()，用List<Map>接收查询结果，如果值为空，会被过滤
+     *
+     * {"_id":"monster","count":2}
+     * {"_id":"master","count":1}
+     * {"count":1} //这里应该是{"_id":null,"count":1}
+     * {"_id":"student","count":3}
+     */
+    public AggregationResults<Document> getRoleCount(){
+        Aggregation aggregation = Aggregation.newAggregation(Aggregation.group("role").count().as("count"));
+        AggregationResults<Document> user = mongoTemplate.aggregate(aggregation, "user", Document.class);
+        return user;
+    }
 
+    public AggregationResults<Document> getRoleCountDesc(){
+        List<AggregationOperation> countAndSort = Arrays.asList(
+                new AggregationOperation[]{
+                        Aggregation.group("role").count().as("count"),
+                        Aggregation.sort(Sort.Direction.DESC, "count")
+                }
+        );
+        AggregationResults<Document> user =
+                mongoTemplate.aggregate(Aggregation.newAggregation(countAndSort), "user", Document.class);
+        return user;
+    }
+
+    //取人数最多的role组
+    public AggregationResults<Document> getRoleMaxCount(){
+        List<AggregationOperation> countAndSort = Arrays.asList(
+                new AggregationOperation[]{
+                        Aggregation.group("role").count().as("count"),
+                        Aggregation.sort(Sort.Direction.DESC, "count"),
+                        Aggregation.limit(1)
+                }
+        );
+        AggregationResults<Document> user =
+                mongoTemplate.aggregate(Aggregation.newAggregation(countAndSort), "user", Document.class);
+        return user;
+    }
+
+    public static void main(String[] args) throws Exception{
+       /* SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date parse = sdf.parse("1955-05-05 05:05:05");
+        System.out.println(parse);*/
+
+        Map<String, String> map = new LinkedHashMap<>();
+        map.put("_id",null);
+        System.out.println(JSON.toJSONString(map));
     }
 }

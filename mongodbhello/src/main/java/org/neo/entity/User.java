@@ -7,6 +7,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import javax.validation.constraints.NotNull;
 import java.util.Date;
+import java.util.List;
 
 @Document(collection = "user")
 public class User {
@@ -22,6 +23,18 @@ public class User {
     private String nickname;
 
     private Date birth;
+
+    private List<Ability> ablities;
+
+    public class Ability{
+        String item;
+        Integer value;
+
+        public Ability(String item, Integer value) {
+            this.item = item;
+            this.value = value;
+        }
+    }
 
     public User(){}
 
@@ -71,5 +84,13 @@ public class User {
 
     public void setBirth(Date birth) {
         this.birth = birth;
+    }
+
+    public List<Ability> getAblities() {
+        return ablities;
+    }
+
+    public void setAblities(List<Ability> ablities) {
+        this.ablities = ablities;
     }
 }
