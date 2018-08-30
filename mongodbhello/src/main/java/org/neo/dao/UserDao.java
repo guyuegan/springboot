@@ -11,6 +11,7 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
 import org.springframework.data.mongodb.core.aggregation.AggregationResults;
+import org.springframework.data.mongodb.core.aggregation.Fields;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
@@ -113,6 +114,16 @@ public class UserDao {
     }
 
     /**
+     * study.test_date中文档
+     */
+    public List<User> findBetweenTimeStr(String startTime, String endTime){
+
+        Query birthQry = new Query(Criteria.where("birth").gte(startTime).lte(endTime));
+        List<User> users = mongoTemplate.find(birthQry, User.class, "test_date");
+        return users;
+    }
+
+    /**
      * return user.getMappedResults()，用List<Map>接收查询结果，如果值为空，会被过滤
      *
      * {"_id":"monster","count":2}
@@ -169,22 +180,115 @@ public class UserDao {
         return aggregateResult;
     }
 
-    public AggregationResults<Document> getCountNotBetweenAbilitiy(String item, int low, int high){
+    /**
+     * 注意orOperator的使用方式:
+     * 聚合第三步也可以写成：Aggregation.match(
+     *                        Criteria.where("abilities.item").is(item).
+     *                        orOperator(Criteria.where("abilities.value").lt(low),
+     *                                   Criteria.where("abilities.value").gt(high))
+     *                     ),
+     * 对应mongoTemplate自动生成的shell
+     * { "aggregate" : "user", "pipeline" :
+     * [{ "$match" : { "$or" : [{ "role" : "student" }, { "role" : "master" }] } },
+     *  { "$unwind" : "$abilities" },
+     *  { "$match" : { "abilities.item" : "attack", "$or" : [{ "abilities.value" : { "$lt" : 30 } }, { "abilities.value" : { "$gt" : 60 } }] } },
+     *  { "$group" : { "_id" : "$role", "count" : { "$sum" : 1 } } }], "cursor" : { "batchSize" : 2147483647 } }
+     *
+     *
+     *
+     * 但是聚合第一步不能写成：Aggregation.match(
+     *                          Criteria.where("role").is("student").
+     *                          orOperator(Criteria.where("role").is("master"))
+     *                       ),
+     * 对应mongoTemplate自动生成的shell
+     *{ "aggregate" : "user", "pipeline" :
+     *      * [{ "$match" : { "role" : "student", "$or" : [{ "role" : "master" }] } },
+     *      *  { "$unwind" : "$abilities" },
+     *      *  { "$match" : { "abilities.item" : "attack", "$and" : [{ "$or" : [{ "abilities.value" : { "$lt" : 30 } }, { "abilities.value" : { "$gt" : 60 } }] }] } },
+     *      *  { "$group" : { "_id" : "$role", "count" : { "$sum" : 1 } } }], "cursor" : { "batchSize" : 2147483647 } }
+     * 在mongo执行,没有结果
+     * db.user.aggregate(
+     * ... { "$match" : { "role" : "student", "$or" : [{ "role" : "master" }] } }
+     * ... )
+     * >
+     *
+     *
+     * 总结：Criteria.where("K").is("V").orOperator(Criteria c1, Criteria c2)
+     *      只有c1,c2才是or关系，和前面的where是and关系
+     */
+    public AggregationResults<Document> getCountNotBetweenAbility(String item, int low, int high){
 
         Criteria orCriteria = new Criteria().orOperator(
                 Criteria.where("abilities.value").lt(low),
                 Criteria.where("abilities.value").gt(high)
         );
 
+        Criteria orCriteria02 = new Criteria().orOperator(
+                Criteria.where("role").is("student"),
+                Criteria.where("role").is("master")
+        );
+
         List<AggregationOperation> aggregationOperations = Arrays.asList(
                 new AggregationOperation[]{
-                        Aggregation.match(Criteria.where("role").is("student")),
+                        Aggregation.match(orCriteria02),
                         Aggregation.unwind("abilities"),
                         Aggregation.match(Criteria.where("abilities.item").is(item).andOperator(orCriteria)),
                         Aggregation.group("role").count().as("count")
-                });
+                }
+        );
         AggregationResults<Document> aggregateResult = mongoTemplate.aggregate(Aggregation.newAggregation(aggregationOperations), "user", Document.class);
 
+        return aggregateResult;
+    }
+
+    /**
+     * mongoTemplate的聚合很强大，应该带$的字段，如果不带$，自动帮我们加上了
+     */
+    public AggregationResults<Document> getSummaryAbilityOfStudent(String role, String ability, String operator){
+
+//        Fields fields = Fields.from(Fields.field("grp_role", "role"), Fields.field("grp_ability_item", "abilities.item"));
+        Fields fields = Fields.from(Fields.field("role_alias", "$role"), Fields.field("item_alias", "$abilities.item"));
+
+        List<AggregationOperation> aggregationOperations = new ArrayList<>();
+        aggregationOperations.add(Aggregation.match(Criteria.where("role").is(role)));
+        aggregationOperations.add(Aggregation.unwind("$abilities"));
+
+        if(operator.equalsIgnoreCase("avg")) {
+            aggregationOperations.add(
+                    Aggregation.group("$role", "$abilities.item").avg("$abilities.value").as(operator+"_" + ability));
+        }
+        else if(operator.equalsIgnoreCase("sum")) {
+            aggregationOperations.add(
+                    Aggregation.group("$role", "$abilities.item").sum("$abilities.value").as(operator+"_" + ability));
+        }
+        else if(operator.equalsIgnoreCase("max")) {
+            aggregationOperations.add(
+                    //Aggregation.group("role", "abilities.item").min("abilities.value").as(operator+"_" + ability));
+                    Aggregation.group(fields).max("$abilities.value").as(operator+"_" + ability));
+        }
+        else if(operator.equalsIgnoreCase("min")) {
+            aggregationOperations.add(
+                    //Aggregation.group("role", "abilities.item").min("abilities.value").as(operator+"_" + ability));
+                    Aggregation.group(fields).min("$abilities.value").as(operator+"_" + ability));
+        }
+
+        AggregationResults<Document> aggregateResult = mongoTemplate.aggregate(Aggregation.newAggregation(aggregationOperations), "user", Document.class);
+
+        return aggregateResult;
+    }
+
+    public AggregationResults<Document> getSummaryAbility(){
+        List<AggregationOperation> aggregationOperations = Arrays.asList(
+                new AggregationOperation[]{
+                        Aggregation.unwind("$abilities.item"),
+                        Aggregation.group("$abilities.item")
+                                   .sum("$abilities.value").as("sum")
+                                   .avg("$abilities.value").as("avg")
+                                   .max("$abilities.value").as("max")
+                                   .min("$abilities.value").as("min")}
+        );
+
+        AggregationResults<Document> aggregateResult = mongoTemplate.aggregate(Aggregation.newAggregation(aggregationOperations), "user", Document.class);
         return aggregateResult;
     }
 

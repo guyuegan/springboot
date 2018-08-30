@@ -159,14 +159,23 @@ public class MongodbhelloApplicationTest {
              * { "birth" : { "$gte" : { "$date" : 834012366000 }, "$lte" : { "$date" : 902534888000 } } }
              */
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            Date startTime = sdf.parse("1993-03-03 11:03:03");
-            Date endTime = sdf.parse("1998-08-08 16:08:08");
+            Date startTime = sdf.parse("1993-03-03 11:03:03");//取库中1993-03-03 03:03:03数据
+            Date endTime = sdf.parse("1998-08-08 16:08:08");//取库中1998-08-08 08:08:08数据
             List<User> betweenTime = userDao.findBetweenTime(startTime, endTime);
             //jdk1.8新写法
             betweenTime.forEach((u) -> System.out.println(JSON.toJSONString(u)));
         } catch (ParseException e) {
             e.printStackTrace();
         }
+    }
+
+    @Test
+    public void findBetweenTimeStr() {
+        String startTime = "2017-03-03 11:03:03";
+        String endTime = "2019-08-08 16:08:08";
+        List<User> betweenTime = userDao.findBetweenTimeStr(startTime, endTime);
+        //jdk1.8新写法
+        betweenTime.forEach((u) -> System.out.println(JSON.toJSONString(u)));
     }
 
     @Test
@@ -194,8 +203,33 @@ public class MongodbhelloApplicationTest {
     }
 
     @Test
-    public void getCountNotBetweenAbilitiy(){
-        AggregationResults<Document> countByRole = userDao.getCountNotBetweenAbilitiy("attack", 30, 60);
+    public void getCountNotBetweenAbility(){
+        AggregationResults<Document> countByRole = userDao.getCountNotBetweenAbility("attack", 30, 60);
         countByRole.forEach((obj) -> System.out.println(JSON.toJSONString(obj)));
+    }
+
+    @Test
+    public void getSummaryAbilityOfRole(){
+        AggregationResults<Document> avgAbilityOfRole = userDao.getSummaryAbilityOfStudent("student", "attack", "avg");
+        System.out.println("avg:");
+        avgAbilityOfRole.forEach((obj) -> System.out.println(JSON.toJSONString(obj)));
+
+        AggregationResults<Document> sumAbilityOfRole = userDao.getSummaryAbilityOfStudent("student", "attack", "sum");
+        System.out.println("sum:");
+        sumAbilityOfRole.forEach((obj) -> System.out.println(JSON.toJSONString(obj)));
+
+        AggregationResults<Document> maxAbilityOfRole = userDao.getSummaryAbilityOfStudent("student", "attack", "max");
+        System.out.println("max:");
+        maxAbilityOfRole.forEach((obj) -> System.out.println(JSON.toJSONString(obj)));
+
+        AggregationResults<Document> minAbilityOfRole = userDao.getSummaryAbilityOfStudent("student", "attack", "min");
+        System.out.println("min:");
+        minAbilityOfRole.forEach((obj) -> System.out.println(JSON.toJSONString(obj)));
+    }
+
+    @Test
+    public void getSummaryAbility(){
+        AggregationResults<Document> summaryAbility = userDao.getSummaryAbility();
+        summaryAbility.forEach((obj) -> System.out.println(JSON.toJSONString(obj)));
     }
 }
