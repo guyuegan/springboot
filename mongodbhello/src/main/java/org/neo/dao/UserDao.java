@@ -1,6 +1,7 @@
 package org.neo.dao;
 
 import com.alibaba.fastjson.JSON;
+import com.mongodb.BasicDBObject;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import org.bson.Document;
@@ -8,10 +9,7 @@ import org.neo.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.aggregation.Aggregation;
-import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
-import org.springframework.data.mongodb.core.aggregation.AggregationResults;
-import org.springframework.data.mongodb.core.aggregation.Fields;
+import org.springframework.data.mongodb.core.aggregation.*;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
@@ -280,7 +278,7 @@ public class UserDao {
     public AggregationResults<Document> getSummaryAbility(){
         List<AggregationOperation> aggregationOperations = Arrays.asList(
                 new AggregationOperation[]{
-                        Aggregation.unwind("$abilities.item"),
+                        Aggregation.unwind("$abilities"),
                         Aggregation.group("$abilities.item")
                                    .sum("$abilities.value").as("sum")
                                    .avg("$abilities.value").as("avg")
@@ -292,6 +290,28 @@ public class UserDao {
         return aggregateResult;
     }
 
+
+    //将同年同月同日生分一组  https://blog.csdn.net/haiyoung/article/details/80865043
+    public AggregationResults<Document> getSummarySameBirth(){
+
+        //给分组的字段（_id里面）起别名
+        Fields fields = Fields.from(Fields.field("$year", "$birth"),
+                                    Fields.field("$month", "$birth"),
+                                    Fields.field("$dayOfMonth", "$birth"));
+        //Lambda
+        AggregationExpression sumExpression  =
+                (ctx) -> ctx.getMappedObject(Document.parse(new BasicDBObject("$sum", "$abilities.value").toJson()));
+
+        AggregationOperation sumSameBirth = Aggregation.group(fields)
+                                                       .count().as("totalSame")
+                                                       .sum("$age").as("totalAge")
+                                                       .sum(sumExpression).as("totalAbility");
+
+        AggregationResults<Document> aggregateResult = mongoTemplate.aggregate(Aggregation.newAggregation(sumSameBirth), "user", Document.class);
+
+        return aggregateResult;
+    }
+
     public static void main(String[] args) throws Exception{
        /* SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         Date parse = sdf.parse("1955-05-05 05:05:05");
@@ -300,5 +320,7 @@ public class UserDao {
         Map<String, String> map = new LinkedHashMap<>();
         map.put("_id",null);
         System.out.println(JSON.toJSONString(map));
+
+        System.out.println(new BasicDBObject("year", new BasicDBObject("$year", "$birth")).toJson());
     }
 }

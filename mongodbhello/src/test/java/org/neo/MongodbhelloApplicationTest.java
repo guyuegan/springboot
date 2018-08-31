@@ -232,4 +232,10 @@ public class MongodbhelloApplicationTest {
         AggregationResults<Document> summaryAbility = userDao.getSummaryAbility();
         summaryAbility.forEach((obj) -> System.out.println(JSON.toJSONString(obj)));
     }
+
+    @Test
+    public void getSummarySameBirth(){
+        AggregationResults<Document> summarySameBirth = userDao.getSummarySameBirth();
+        summarySameBirth.forEach((obj) -> System.out.println(JSON.toJSONString(obj)));
+    }
 }
