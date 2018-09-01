@@ -1,0 +1,283 @@
+//排序
+db.user.find().sort({"age":-1})
+
+
+//新增字段 【$set birth=new Date()】
+db.user.update(
+  {"username":/^wu/},
+  {"$set":{"birth":new Date("1955/05/05 05:05:05")}}
+)
+
+
+//新增数组类型字段 【$set birth=new Date()】
+db.user.update(
+  {"username":/^wu/},
+  {
+     "$set":{"abilities":[{"item":"attack", "value":100}, {"item":"happy", "value":55}]}
+  }
+)
+
+
+//删除字段 【$unset birth=""】
+db.user.update(
+  {"username":/^wu/},
+  {"$unset":{"birth":""}}
+)
+
+
+//字段存不存在 【birth $exists true/false】
+db.user.find(
+  {"birth":{"$exists":true}}
+)
+
+
+//如果_class存在则删除, 只更新第一个匹配的文档
+db.user.update(
+  {"_class":{"$exists":true}},
+  {"$unset":{"_class":""}}
+)
+
+
+//如果_class存在则删除, 更新全部匹配的文档
+db.user.updateMany(
+  {"_class":{"$exists":true}},
+  {"$unset":{"_class":""}}
+)
+
+
+//同时新增和删除字段
+db.user.find({"unset":{"$exists":true}})
+{ "_id" : "1", "unset" : { "_class" : "" } }
+
+> db.user.update(
+  {"_id":"1"},
+  {"$set":{"username":"wukong", "age":500, "nickname":"dasheng"}, "$unset":{"unset":""}}
+)
+WriteResult({ "nMatched" : 1, "nUpserted" : 0, "nModified" : 1 })
+
+> db.user.find({"username":/^wu/})
+{ "_id" : "1", "age" : 500, "nickname" : "dasheng", "username" : "wukong" }
+
+
+
+//查询某段时间 【birth $gte ISODate $lte ISODate】
+db.user.find(
+  {
+     "birth":{"$gte":ISODate("1966-06-06T06:06:06Z"), "$lte":ISODate("1988-08-08T08:08:08Z")}
+  }
+)
+
+
+//count
+db.user.find({"role":{"$exists":true}}).count()
+
+
+//aggregate $group
+db.user.aggregate([
+  {"$group":{"_id":"$role", "grp_cnt":{"$sum":1}}}
+])
+
+
+//aggregate $group $sort
+db.user.aggregate([
+  {"$group":{"_id":"$role", "grp_cnt":{"$sum":1}}},
+  {"$sort":{"count":-1}}
+])
+
+
+//aggregate $group $sort $limit ==> 取人数最多的角色
+db.user.aggregate([
+  {"$group":{"_id":"$role", "grp_cnt":{"$sum":1}}},
+  {"$sort":{"count":-1}},
+  {"$limit":1}
+])
+
+
+//$unwind: 拆数组（根据爱好分身，即每个分身只有爱好不同）
+> db.test.find()
+{ "_id" : ObjectId("5b8656fa2cbb0990e402ede8"), "name" : "neo", "hobby" : [ "basketball", "program", "sleep" ] }
+> db.test.aggregate({"$unwind":"$hobby"})
+{ "_id" : ObjectId("5b8656fa2cbb0990e402ede8"), "name" : "neo", "hobby" : "basketball" }
+{ "_id" : ObjectId("5b8656fa2cbb0990e402ede8"), "name" : "neo", "hobby" : "program" }
+{ "_id" : ObjectId("5b8656fa2cbb0990e402ede8"), "name" : "neo", "hobby" : "sleep" }
+> db.test.find()
+{ "_id" : ObjectId("5b8656fa2cbb0990e402ede8"), "name" : "neo", "hobby" : [ "basketball", "program", "sleep" ]
+
+
+//某个角色某项能力在某个范围的人数, 聚合每一步输出是下一步输入
+//排错：一步一步分开执行，只有执行结果是预期结果，才进行下一步
+db.user.aggregate([
+  {"$match":{"role":"student"}},
+  {"$unwind":"$abilities"},
+  {"$match":{"abilities.item":"attack", "abilities.value":{"$gte":60, "$lte":100}}},
+  {"$group":{"_id":"$role", "grp_cnt":{"$sum":1}}}
+])
+
+
+//某个角色某项能力不在范围内的人数
+db.user.aggregate([
+  {"$match":{"role":"student"}},
+  {"$unwind":"$abilities"},
+  {
+    "$match":
+     {"abilities.item":"attack", "$or":[{"abilities.value":{"$lt":30}}, {"abilities.value":{"$gt":60}}]}
+  },
+ {"$group":{"_id":"$role", "grp_cnt":{"$sum":1}}}
+])
+
+//master和student角色某项能力不在范围内的人数
+db.user.aggregate([
+  {"$match":{"$or":[{"role":"student"}, {"role":"master"}]}},
+  {"$unwind":"$abilities"},
+  {
+    "$match":
+     {"abilities.item":"attack", "$or":[{"abilities.value":{"$lt":30}}, {"abilities.value":{"$gt":60}}]}
+  },
+ {"$group":{"_id":"$role", "grp_cnt":{"$sum":1}}}
+])
+
+
+//清空集合（即remove所有数据）
+> db.test_unwind.find()
+{ "_id" : ObjectId("5b873ee21839288f0514676b") }
+> db.test_unwind.remove({}) //{}不能省略
+WriteResult({ "nRemoved" : 1 })
+> db.test_unwind.find()
+
+
+//drop collection
+> db.test.drop()
+true
+> db.test.find()
+
+
+
+//将一个collection查询结果,保存到另一个collection
+> db.test.find()
+{ "_id" : ObjectId("5b8656fa2cbb0990e402ede8"), "name" : "neo", "hobby" : [ "basketball", "program", "sleep" ] }
+> db.test.find().forEach(function(e){
+... db.test_unwind.insert(e);
+... })
+> db.test_unwind.find()
+{ "_id" : ObjectId("5b8656fa2cbb0990e402ede8"), "name" : "neo", "hobby" : [ "basketball", "program", "sleep" ] }
+>
+
+
+//Date 和 new Date的区别
+> db.test_date.insert({"name":"neo", "birth":new Date()})
+WriteResult({ "nInserted" : 1 })
+> db.test_date.insert({"name":"hm", "birth":Date()})
+WriteResult({ "nInserted" : 1 })
+> db.test_date.find()
+{ "_id" : ObjectId("5b87421d1839288f0514676c"), "name" : "neo", "birth" : ISODate("2018-08-30T01:02:21.048Z") }
+{ "_id" : ObjectId("5b87422d1839288f0514676d"), "name" : "hm", "birth" : "Thu Aug 30 2018 01:02:37 GMT+0000 (UTC)" }
+
+
+//取年，月，日，时，分，秒
+> db.test_date.find()[0].birth
+ISODate("2018-08-30T01:02:21.048Z")
+> d=db.test_date.find()[0].birth
+ISODate("2018-08-30T01:02:21.048Z")
+> d.getFullYear()
+2018
+> d.getMonth()
+7
+> d.getMonth()+1 //js中月份从0开始
+8
+> d.getDate()
+30
+> d.getHour()
+2018-08-30T01:07:16.731+0000 E QUERY    [js] TypeError: d.getHour is not a function :
+@(shell):1:1
+> d.getHours() //根据https://blog.csdn.net/shiyaru1314/article/details/53465232，这里应该取出来是9点？？？
+1
+> d.getMinutes()
+2
+> d.getSeconds()
+21
+
+
+//求各个能力组的最大值，最小值，平均值，总和
+db.user.aggregate([
+  {"$unwind":"$abilities"},
+  {"$group":{"_id":{"ability":"$abilities.item"},
+		    "max":{"$max":"$abilities.value"},
+		    "min":{"$min":"$abilities.value"},
+              	    "sum":{"$sum":"$abilities.value"},
+		    "avg":{"$avg":"$abilities.value"}}
+  }
+])
+
+
+//求某个角色组某个能力的平均值
+db.user.aggregate([
+  {"$match":{"role":"student"}},
+  {"$unwind":"$abilities"},
+  {"$match":{"abilities.item":"attack"}},//只要有攻击力的分身
+  {"$group":{"_id":{"role":"$role", "ability":"$abilities.item"}, "avgAbility":{"$avg":"$abilities.value"}}}
+])
+
+
+//求某个角色组某个能力的总和
+db.user.aggregate([
+  {"$match":{"role":"student"}},
+  {"$unwind":"$abilities"},
+  {"$match":{"abilities.item":"attack"}},//只要有攻击力的分身
+  {"$group":{"_id":{"role":"$role", "ability":"$abilities.item"}, "sumAbility":{"$sum":"$abilities.value"}}}
+])
+
+
+//求某个角色组某个能力的最大值
+db.user.aggregate([
+  {"$match":{"role":"student"}},
+  {"$unwind":"$abilities"},
+  {"$match":{"abilities.item":"attack"}},//只要有攻击力的分身
+  {"$group":{"_id":{"role":"$role", "ability":"$abilities.item"}, "maxAbility":{"$max":"$abilities.value"}}}
+])
+
+
+
+//求各个角色各个能力组的最大值，最小值，平均值，总和
+db.user.aggregate([
+  {"$unwind":"$abilities"},
+  {"$group":{"_id":{"role":"$role", "ability":"$abilities.item"},
+		    "max":{"$max":"$abilities.value"},
+		    "min":{"$min":"$abilities.value"},
+              	    "sum":{"$sum":"$abilities.value"},
+		    "avg":{"$avg":"$abilities.value"}}
+  }
+])
+
+
+################################################以上参考：https://blog.csdn.net/ruoguan_jishou/article/details/79289369################################################
+
+
+//对同年同月同日生的人的数据，汇总
+db.user.aggregate([
+  {"$group":{
+    "_id":{"month":{"$month":"$birth"}, "day":{"$dayOfMonth":"$birth"}, "year":{"$year":"$birth"}},
+    "totalSame":{"$sum":1},
+    "totalAge":{"$sum":"$age"},
+    "totalAbility":{"$sum":{"$sum":"$abilities.value"}} //第一个"$sum"计算每个人能力总值，第二个"$sum"计算同一组能力总值
+  }}
+])
+
+
+//六二泥猴
+db.user.insert({
+  "_id" : "7",
+  "age" : 250,
+  "nickname" : "六二",
+  "username" : "liuernihou",
+  "birth" : ISODate("1995-05-05T05:05:05Z"),
+  "role" : "master",
+  "abilities" : [ { "item" : "attack", "value" : 100 },
+                  { "item" : "happy", "value" : 100 } ]
+})
+
+
+
+ Executing aggregation: { "aggregate" : "user", "pipeline" : [{ "$group" : { "_id" : { "year_alias" : "$birth'}", "month_alias" : "$birth'}", "day_alias" : "$birth'}" }, "totalSame" : { "$sum" : 1 }, "totalAge" : { "$sum" : "$age" }, "totalAbility" : { "$sum" : "$abilities.value'}" } } }], "cursor" : { "batchSize" : 2147483647 } }
+ Executing aggregation: { "aggregate" : "user", "pipeline" : [{ "$group" : { "_id" : { "year" : "$birth", "month" : "$birth", "dayOfMonth" : "$birth" }, "totalSame" : { "$sum" : 1 }, "totalAge" : { "$sum" : "$age" }, "totalAbility" : { "$sum" : { "$sum" : { "$sum" : "$abilities.value" } } } } }], "cursor" : { "batchSize" : 2147483647 } }
+ Executing aggregation: { "aggregate" : "user", "pipeline" : [{ "$group" : { "_id" : { "year" : "$birth\" }", "month" : "$birth\" }", "day" : "$birth\" }" }, "totalSame" : { "$sum" : 1 }, "totalAge" : { "$sum" : "$age" }, "totalAbility" : { "$sum" : { "$sum" : "$abilities.value" } } } }], "cursor" : { "batchSize" : 2147483647 } }
+
