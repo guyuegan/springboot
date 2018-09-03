@@ -9,7 +9,9 @@ import org.neo.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.ScriptOperations;
 import org.springframework.data.mongodb.core.aggregation.*;
+import org.springframework.data.mongodb.core.query.BasicQuery;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
@@ -36,10 +38,60 @@ public class UserDao {
         return all;
     }
 
+    /**
+     * 限制返回的字段
+     */
+    public List<User> findAllWithProject(){
+        BasicDBObject qryObj = new BasicDBObject();
+
+        BasicDBObject fieldObj = new BasicDBObject();
+        fieldObj.put("username", 1);
+        fieldObj.put("age", 1);
+
+        BasicQuery basicQuery = new BasicQuery(qryObj.toJson(), fieldObj.toJson());
+        List<User> all = mongoTemplate.find(basicQuery, User.class);
+        return all;
+    }
+
+    /**
+     * 限制返回的字段
+     */
+    public List<User> findByAgeWithProject(int minAge, int maxAge){
+        BasicDBObject qryObj = new BasicDBObject();
+        qryObj.put("age", new BasicDBObject("$gte", minAge).append("$lte", maxAge));
+
+        BasicDBObject fieldObj = new BasicDBObject("_id", 0);
+        fieldObj.put("username", 1);
+        fieldObj.put("age", 1);
+
+        BasicQuery basicQuery = new BasicQuery(qryObj.toJson(), fieldObj.toJson());
+        List<User> all = mongoTemplate.find(basicQuery, User.class);
+        return all;
+    }
+
     public User findByUsername(String username){
         Criteria usernameCriteria = Criteria.where("username").is(username);
         User one = mongoTemplate.findOne(new Query(usernameCriteria), User.class);
         return one;
+    }
+
+    /**
+     * BasicQuery才有过滤字段功能？？
+     * Document可以替代BasicDBOject
+     */
+    public List<User> findByNeUsername(String username){
+
+        /*BasicDBObject filedObj = new BasicDBObject("_id", 0)
+                .append("username", 1).append("age", 1);*/
+
+        Document filed = new Document("_id", 0)
+                .append("username", 1).append("age", 1);
+
+        Criteria neUsernameCriteria = Criteria.where("username").ne(username);
+        Query query = new BasicQuery(null, filed.toJson()).addCriteria(neUsernameCriteria);
+
+        List<User> users = mongoTemplate.find(query, User.class);
+        return users;
     }
 
     public DeleteResult del(String id){
@@ -310,6 +362,16 @@ public class UserDao {
         AggregationResults<Document> aggregateResult = mongoTemplate.aggregate(Aggregation.newAggregation(sumSameBirth), "user", Document.class);
 
         return aggregateResult;
+    }
+
+    /**
+     * 调用存储过程（函数）
+     */
+    public Object callProcess(){
+        ScriptOperations scriptOperations = mongoTemplate.scriptOps();
+        //参数放到函数名后面
+        Object getCountByAgeRange = scriptOperations.call("getCountByAgeRange", 1, 1000);
+        return getCountByAgeRange;
     }
 
     public static void main(String[] args) throws Exception{

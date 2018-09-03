@@ -238,4 +238,28 @@ public class MongodbhelloApplicationTest {
         AggregationResults<Document> summarySameBirth = userDao.getSummarySameBirth();
         summarySameBirth.forEach((obj) -> System.out.println(JSON.toJSONString(obj)));
     }
+
+    @Test
+    public void callProcess(){
+        Object processResult = userDao.callProcess();
+        System.out.println(processResult);
+    }
+
+    @Test
+    public void findAllWithProject(){
+        List<User> allWithProject = userDao.findAllWithProject();
+        allWithProject.forEach((obj) -> System.out.println(JSON.toJSONString(obj)));
+    }
+
+    @Test
+    public void findByAgeWithProject(){
+        List<User> allWithProject = userDao.findByAgeWithProject(666, 1000);
+        allWithProject.forEach((obj) -> System.out.println(JSON.toJSONString(obj)));
+    }
+
+    @Test
+    public void findByNeUsername(){
+        List<User> neUsername = userDao.findByNeUsername("liuernihou");
+        neUsername.forEach((obj) -> System.out.println(JSON.toJSONString(obj)));
+    }
 }
